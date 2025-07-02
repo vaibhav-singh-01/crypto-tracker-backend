@@ -1,8 +1,11 @@
 import os
 import json
+import logging
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 class Settings:
     PROJECT_NAME: str = "Crypto Tracker API"
@@ -20,7 +23,8 @@ class Settings:
             try:
                 with open(self.PINNED_CRYPTOS_FILE, 'r') as f:
                     return json.load(f)
-            except Exception:
+            except Exception as e:
+                logger.error(f"Error loading pinned cryptos: {e}")
                 return []
         return []
     
@@ -30,6 +34,6 @@ class Settings:
             with open(self.PINNED_CRYPTOS_FILE, 'w') as f:
                 json.dump(self.PINNED_CRYPTOS, f)
         except Exception as e:
-            print(f"Error saving pinned cryptos: {e}")
+            logger.error(f"Error saving pinned cryptos: {e}")
 
 settings = Settings()
