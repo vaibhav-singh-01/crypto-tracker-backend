@@ -64,3 +64,7 @@ async def get_pinned_cryptos():
     except Exception as e:
         logger.error(f"Error fetching pinned cryptos: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/health")
+async def health_check():
+    return {"status": "healthy"}

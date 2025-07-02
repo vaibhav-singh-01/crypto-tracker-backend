@@ -36,7 +36,3 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     log.info("Shutting down Crypto Tracker API")
-
-@app.get("/health")
-def health_check():
-    return {"status": "healthy"}
