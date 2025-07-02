@@ -16,6 +16,7 @@ class Settings:
     
     def __init__(self):
         self.PINNED_CRYPTOS = self.load_pinned_cryptos()
+        self.validate_required_settings()
     
     def load_pinned_cryptos(self) -> list:
         """Load pinned cryptos from file"""
@@ -35,5 +36,10 @@ class Settings:
                 json.dump(self.PINNED_CRYPTOS, f)
         except Exception as e:
             logger.error(f"Error saving pinned cryptos: {e}")
+    
+    def validate_required_settings(self):
+        if not self.COINGECKO_API_KEY:
+            logger.error("COINGECKO_API_KEY environment variable is required but not set")
+            raise ValueError("COINGECKO_API_KEY environment variable is required")
 
 settings = Settings()
