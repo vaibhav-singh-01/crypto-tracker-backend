@@ -31,7 +31,7 @@ health check
 
 Response: {"status": "healthy"}
 
-### 2. GET /api/v1/coins
+### 3. GET /api/v1/coins
 
 To get list of coins to show at homepage: takes parameters vs_currency and limit (deafult values are "usd" and 100)
 
@@ -81,7 +81,7 @@ Error Response:
   "detail": "Error fetching coins: 400 Client Error: Bad Request for url: https://api.coingecko.com/api/v3/coins/markets?vs_currency=bad_value_to_get_error&order=market_cap_desc&per_page=2&page=1&sparkline=False"
 }
 
-### 3. GET /api/v1/price/{crypto_id}
+### 4. GET /api/v1/price/{crypto_id}
 
 To fetch price of a specific crypto_id
 
@@ -104,7 +104,7 @@ Error response:
   "detail": "Error fetching price: 'tibcoin'"
 }
 
-### 4. POST /api/v1/pin
+### 5. POST /api/v1/pin
 
 To pin a specific crypto, crypto_id should be sent in the body.
 
@@ -129,7 +129,7 @@ response if success:
   "message": "dogecoin pinned successfully"
 }
 
-### 5. DELETE /api/v1/unpin/{crypto_id}
+### 6. DELETE /api/v1/unpin/{crypto_id}
 
 To unpin crypto_id
 
@@ -150,7 +150,7 @@ error response:
   "detail": "404: Crypto not pinned"
 }
 
-### 6. GET /api/v1/pinned
+### 7. GET /api/v1/pinned
 
 To fetch all the pinned cryptos
 
@@ -176,7 +176,6 @@ success response:
   }
 ]
 
-### 7. 
 
 
 
