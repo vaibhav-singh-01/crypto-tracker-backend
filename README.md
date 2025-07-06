@@ -17,6 +17,13 @@ A simple, modular cryptocurrency price tracker API built with *Python* and the *
 - Python
 - Internet access (to call the CoinGecko API)
 
+### How to start the app
+
+From the project root, run:
+
+```bash
+uvicorn app.main:app --reload
+
 ## APIs
 
 ### 1. GET /

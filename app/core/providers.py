@@ -9,17 +9,21 @@ logger = logging.getLogger(__name__)
 
 class CryptoProvider(ABC):
     @abstractmethod
-    def get_price(self, crypto_id: str) -> float:
+    def get_price(self, crypto_id: str, vs_currency: str = "usd") -> float:
         pass
     
     @abstractmethod
     def get_all_coins(self, vs_currency: str, limit: int) -> list:
         pass
+    
+    @abstractmethod
+    def get_coins_by_ids(self, coin_ids: list, vs_currency: str = "usd") -> list:
+        pass
 
 class CoinGeckoProvider(CryptoProvider):
     def __init__(self):
         self._cache: Dict[str, Dict[str, Any]] = {}
-        self._cache_duration = 60  # Cache for 60 seconds
+        self._cache_duration = settings.COINGECKO_CACHE_DURATION
     
     def _is_cache_valid(self, cache_key: str) -> bool:
         """Check if cached data is still valid"""
@@ -45,19 +49,19 @@ class CoinGeckoProvider(CryptoProvider):
         }
         logger.info(f"Cached data for {cache_key}")
 
-    def get_price(self, crypto_id: str) -> float:
-        cache_key = f"price_{crypto_id}"
+    def get_price(self, crypto_id: str, vs_currency: str = "usd") -> float:
+        cache_key = f"price_{crypto_id}_{vs_currency}"
         
         # Check cache first
         cached_data = self._get_cached_data(cache_key)
         if cached_data is not None:
             return cached_data
         
-        logger.info(f"Making CoinGecko API call for price: {crypto_id}")
+        logger.info(f"Making CoinGecko API call for price: {crypto_id} in {vs_currency}")
         url = f"{settings.COINGECKO_API_URL}/simple/price"
         params = {
             "ids": crypto_id,
-            "vs_currencies": "usd"
+            "vs_currencies": vs_currency
         }
         
         if settings.COINGECKO_API_KEY:
@@ -67,13 +71,14 @@ class CoinGeckoProvider(CryptoProvider):
             response = requests.get(url, params=params)
             response.raise_for_status()
             data = response.json()
-            price = data[crypto_id]["usd"]
+            price = data[crypto_id][vs_currency]
             
             # Cache the result
             self._set_cache(cache_key, price)
             return price
         except Exception as e:
-            raise ValueError(f"Error fetching price: {str(e)}")
+            logger.error(f"Error fetching price for {crypto_id} in {vs_currency}: {str(e)}")
+            raise ValueError("Unable to fetch cryptocurrency price")
     
     def get_all_coins(self, vs_currency: str = "usd", limit: int = 100) -> list:
         cache_key = f"all_coins_{vs_currency}_{limit}"
@@ -105,7 +110,45 @@ class CoinGeckoProvider(CryptoProvider):
             self._set_cache(cache_key, data)
             return data
         except Exception as e:
-            raise ValueError(f"Error fetching coins: {str(e)}")
+            logger.error(f"Error fetching coins for {vs_currency} with limit {limit}: {str(e)}")
+            raise ValueError("Unable to fetch cryptocurrency market data")
+    
+    def get_coins_by_ids(self, coin_ids: list, vs_currency: str = "usd") -> list:
+        if not coin_ids:
+            return []
+        
+        # Create cache key based on sorted coin_ids to ensure consistent caching
+        sorted_ids = sorted(coin_ids)
+        cache_key = f"coins_by_ids_{','.join(sorted_ids)}_{vs_currency}"
+        
+        # Check cache first
+        cached_data = self._get_cached_data(cache_key)
+        if cached_data is not None:
+            return cached_data
+        
+        logger.info(f"Making CoinGecko API call for specific coins: {coin_ids} in {vs_currency}")
+        url = f"{settings.COINGECKO_API_URL}/coins/markets"
+        params = {
+            "ids": ",".join(coin_ids),
+            "vs_currency": vs_currency,
+            "order": "market_cap_desc",
+            "sparkline": False
+        }
+        
+        if settings.COINGECKO_API_KEY:
+            params["x_cg_demo_api_key"] = settings.COINGECKO_API_KEY
+        
+        try:
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
+            
+            # Cache the result
+            self._set_cache(cache_key, data)
+            return data
+        except Exception as e:
+            logger.error(f"Error fetching specific coins {coin_ids} for {vs_currency}: {str(e)}")
+            raise ValueError("Unable to fetch cryptocurrency market data")
 
 # Add new providers here
 PROVIDERS = {

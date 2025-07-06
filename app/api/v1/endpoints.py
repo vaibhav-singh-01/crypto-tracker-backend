@@ -21,17 +21,17 @@ async def get_all_coins(vs_currency: str = "usd", limit: int = 100):
         return coins
     except Exception as e:
         logger.error(f"Error fetching coins: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to fetch cryptocurrency data")
 
 @router.get("/price/{crypto_id}", response_model=CryptoPriceResponse)
-async def get_crypto_price(crypto_id: str):
+async def get_crypto_price(crypto_id: str, vs_currency: str = "usd"):
     try:
-        logger.info(f"Fetching price for {crypto_id}")
-        price = crypto_service.get_price(crypto_id.lower())
+        logger.info(f"Fetching price for {crypto_id} in {vs_currency}")
+        price = crypto_service.get_price(crypto_id.lower(), vs_currency.lower())
         return {"crypto_id": crypto_id, "price": price}
     except Exception as e:
         logger.error(f"Error fetching price for {crypto_id}: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to fetch cryptocurrency price")
 
 @router.post("/pin")
 async def pin_crypto(request: PinCryptoRequest):
@@ -40,9 +40,11 @@ async def pin_crypto(request: PinCryptoRequest):
         logger.info(f"Pinning crypto: {crypto_id}")
         crypto_service.pin_crypto(crypto_id)
         return {"message": f"{crypto_id} pinned successfully"}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error pinning {request.crypto_id}: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to pin cryptocurrency")
 
 @router.delete("/unpin/{crypto_id}")
 async def unpin_crypto(crypto_id: str):
@@ -50,9 +52,11 @@ async def unpin_crypto(crypto_id: str):
         logger.info(f"Unpinning crypto: {crypto_id}")
         crypto_service.unpin_crypto(crypto_id.lower())
         return {"message": f"{crypto_id} unpinned successfully"}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error unpinning {crypto_id}: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to unpin cryptocurrency")
 
 @router.get("/pinned", response_model=list[CoinMarketData])
 async def get_pinned_cryptos():
@@ -63,7 +67,7 @@ async def get_pinned_cryptos():
         return pinned
     except Exception as e:
         logger.error(f"Error fetching pinned cryptos: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to fetch pinned cryptocurrencies")
 
 @router.get("/health")
 async def health_check():

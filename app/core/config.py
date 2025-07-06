@@ -7,16 +7,17 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-class Settings:
+class AppConfig:
     PROJECT_NAME: str = "Crypto Tracker API"
     API_V1_STR: str = "/api/v1"
     COINGECKO_API_URL: str = "https://api.coingecko.com/api/v3"
     COINGECKO_API_KEY: str = os.getenv("COINGECKO_API_KEY", "")
+    COINGECKO_CACHE_DURATION: int = int(os.getenv("COINGECKO_CACHE_DURATION", "60"))
     PINNED_CRYPTOS_FILE: str = "pinned_cryptos.json"
     
     def __init__(self):
         self.PINNED_CRYPTOS = self.load_pinned_cryptos()
-        self.validate_required_settings()
+        self.check_api_key_status()
     
     def load_pinned_cryptos(self) -> list:
         """Load pinned cryptos from file"""
@@ -37,9 +38,10 @@ class Settings:
         except Exception as e:
             logger.error(f"Error saving pinned cryptos: {e}")
     
-    def validate_required_settings(self):
+    def check_api_key_status(self):
+        """Check API key status and provide guidance"""
         if not self.COINGECKO_API_KEY:
-            logger.error("COINGECKO_API_KEY environment variable is required but not set")
-            raise ValueError("COINGECKO_API_KEY environment variable is required")
+            logger.warning("COINGECKO_API_KEY not set - using public API with limited rate limits")
+            logger.info("For better performance, get a free API key at https://www.coingecko.com/en/api")
 
-settings = Settings()
+settings = AppConfig()

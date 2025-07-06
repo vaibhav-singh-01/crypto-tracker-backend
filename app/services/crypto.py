@@ -9,13 +9,25 @@ class CryptoService:
     def __init__(self, provider_name: str = "coingecko"):
         self.provider = PROVIDERS[provider_name]()
 
-    def get_price(self, crypto_id: str) -> float:
-        return self.provider.get_price(crypto_id)
+    def get_price(self, crypto_id: str, vs_currency: str = "usd") -> float:
+        return self.provider.get_price(crypto_id, vs_currency)
 
     def get_all_coins(self, vs_currency: str = "usd", limit: int = 100):
         return self.provider.get_all_coins(vs_currency, limit)
+    
+    def get_coins_by_ids(self, coin_ids: list, vs_currency: str = "usd"):
+        return self.provider.get_coins_by_ids(coin_ids, vs_currency)
 
     def pin_crypto(self, crypto_id: str):
+        if not crypto_id or not crypto_id.strip():
+            raise HTTPException(status_code=400, detail="Crypto ID cannot be empty")
+        
+        # Validate crypto_id 
+        try:
+            self.get_price(crypto_id)
+        except Exception:
+            raise HTTPException(status_code=404, detail=f"Crypto '{crypto_id}' not found")
+        
         if crypto_id not in settings.PINNED_CRYPTOS:
             settings.PINNED_CRYPTOS.append(crypto_id)
             settings.save_pinned_cryptos()
@@ -24,12 +36,15 @@ class CryptoService:
             raise HTTPException(status_code=400, detail="Crypto already pinned")
 
     def unpin_crypto(self, crypto_id: str):
+        if not crypto_id or not crypto_id.strip():
+            raise HTTPException(status_code=400, detail="Crypto ID cannot be empty")
+        
         if crypto_id in settings.PINNED_CRYPTOS:
             settings.PINNED_CRYPTOS.remove(crypto_id)
             settings.save_pinned_cryptos()
             logger.info(f"Successfully unpinned {crypto_id}")
         else:
-            raise HTTPException(status_code=404, detail="Crypto not pinned")
+            raise HTTPException(status_code=404, detail=f"Cannot unpin '{crypto_id}' because it is not currently pinned")
 
     def get_pinned_cryptos(self):
         if not settings.PINNED_CRYPTOS:
@@ -38,11 +53,8 @@ class CryptoService:
         
         logger.info(f"Getting data for {len(settings.PINNED_CRYPTOS)} pinned cryptos: {settings.PINNED_CRYPTOS}")
         
-        # Get all coins data (this will use cache if available)
-        all_coins = self.get_all_coins(limit=250)  # Get more coins to ensure we find all pinned ones
+        # Fetch only the pinned coins directly using their IDs
+        pinned_coins = self.get_coins_by_ids(settings.PINNED_CRYPTOS)
         
-        # Filter to only include pinned coins
-        pinned_coins = [coin for coin in all_coins if coin['id'] in settings.PINNED_CRYPTOS]
-        
-        logger.info(f"Found {len(pinned_coins)} pinned coins in the market data")
+        logger.info(f"Successfully fetched {len(pinned_coins)} pinned coins")
         return pinned_coins
