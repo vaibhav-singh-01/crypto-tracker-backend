@@ -28,7 +28,10 @@ async def get_crypto_price(crypto_id: str, vs_currency: str = "usd"):
     try:
         logger.info(f"Fetching price for {crypto_id} in {vs_currency}")
         price = crypto_service.get_price(crypto_id.lower(), vs_currency.lower())
-        return {"crypto_id": crypto_id, "price": price}
+        return {"crypto_id": crypto_id, "price": price, "currency": vs_currency.lower()}
+    except ValueError as ve:
+        logger.info(f"Validation error for {crypto_id}: {str(ve)}")
+        raise HTTPException(status_code=404, detail=str(ve))
     except Exception as e:
         logger.error(f"Error fetching price for {crypto_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to fetch cryptocurrency price")

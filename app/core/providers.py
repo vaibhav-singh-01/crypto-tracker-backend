@@ -2,10 +2,8 @@ from abc import ABC, abstractmethod
 from app.core.config import settings
 import requests
 import time
-import logging
+from app.core.logging import log as logger
 from typing import Dict, Any, Optional
-
-logger = logging.getLogger(__name__)
 
 class CryptoProvider(ABC):
     @abstractmethod
@@ -71,11 +69,19 @@ class CoinGeckoProvider(CryptoProvider):
             response = requests.get(url, params=params)
             response.raise_for_status()
             data = response.json()
+            
+            if crypto_id not in data:
+                raise ValueError(f"Cryptocurrency '{crypto_id}' not found")
+            
+            if vs_currency not in data[crypto_id]:
+                raise ValueError(f"Currency '{vs_currency}' is not supported")
+            
             price = data[crypto_id][vs_currency]
             
-            # Cache the result
             self._set_cache(cache_key, price)
             return price
+        except ValueError:
+            raise
         except Exception as e:
             logger.error(f"Error fetching price for {crypto_id} in {vs_currency}: {str(e)}")
             raise ValueError("Unable to fetch cryptocurrency price")
@@ -117,11 +123,10 @@ class CoinGeckoProvider(CryptoProvider):
         if not coin_ids:
             return []
         
-        # Create cache key based on sorted coin_ids to ensure consistent caching
+        # cache key based on sorted coin_ids
         sorted_ids = sorted(coin_ids)
         cache_key = f"coins_by_ids_{','.join(sorted_ids)}_{vs_currency}"
         
-        # Check cache first
         cached_data = self._get_cached_data(cache_key)
         if cached_data is not None:
             return cached_data
@@ -143,14 +148,12 @@ class CoinGeckoProvider(CryptoProvider):
             response.raise_for_status()
             data = response.json()
             
-            # Cache the result
             self._set_cache(cache_key, data)
             return data
         except Exception as e:
             logger.error(f"Error fetching specific coins {coin_ids} for {vs_currency}: {str(e)}")
             raise ValueError("Unable to fetch cryptocurrency market data")
 
-# Add new providers here
 PROVIDERS = {
     "coingecko": CoinGeckoProvider
 }

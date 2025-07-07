@@ -85,7 +85,7 @@ Success Response:
 
 Error Response:
 {
-  "detail": "Error fetching coins: 400 Client Error: Bad Request for url: https://api.coingecko.com/api/v3/coins/markets?vs_currency=bad_value_to_get_error&order=market_cap_desc&per_page=2&page=1&sparkline=False"
+  "detail": "Failed to fetch cryptocurrency data"
 }
 
 ### 4. GET /api/v1/price/{crypto_id}
@@ -106,7 +106,13 @@ Success response:
   "currency": "USD"
 }
 
-Error response:
+Error response examples:
+{
+  "detail": "Currency 'stones' is not supported"
+},
+{
+  "detail": "Cryptocurrency 'non_existent_crypto' not found"
+},
 {
   "detail": "Error fetching price: 'tibcoin'"
 }
