@@ -22,3 +22,4 @@ class CoinMarketData(BaseModel):
     market_cap: float
     market_cap_rank: int
     price_change_percentage_24h: float
+    currency: str = "usd"

@@ -5,6 +5,19 @@ import time
 from app.core.logging import log as logger
 from typing import Dict, Any, Optional
 
+# Custom exceptions 
+class CryptoNotFoundError(Exception):
+    pass
+
+class CurrencyNotSupportedError(Exception):
+    pass
+
+class RateLimitError(Exception):
+    pass
+
+class APIServiceError(Exception):
+    pass
+
 class CryptoProvider(ABC):
     @abstractmethod
     def get_price(self, crypto_id: str, vs_currency: str = "usd") -> float:
@@ -67,24 +80,35 @@ class CoinGeckoProvider(CryptoProvider):
 
         try:
             response = requests.get(url, params=params)
+            
+            if response.status_code == 429:
+                logger.warning(f"Rate limit exceeded for CoinGecko API - crypto: {crypto_id}, currency: {vs_currency}")
+                raise RateLimitError("API rate limit exceeded. Please try again later")
+            elif response.status_code == 503:
+                logger.warning(f"CoinGecko API service unavailable - crypto: {crypto_id}, currency: {vs_currency}")
+                raise APIServiceError("Cryptocurrency data service is temporarily unavailable")
+            
             response.raise_for_status()
             data = response.json()
             
             if crypto_id not in data:
-                raise ValueError(f"Cryptocurrency '{crypto_id}' not found")
+                raise CryptoNotFoundError(f"Cryptocurrency '{crypto_id}' not found")
             
             if vs_currency not in data[crypto_id]:
-                raise ValueError(f"Currency '{vs_currency}' is not supported")
+                raise CurrencyNotSupportedError(f"Currency '{vs_currency}' is not supported")
             
             price = data[crypto_id][vs_currency]
             
             self._set_cache(cache_key, price)
             return price
-        except ValueError:
+        except (CryptoNotFoundError, CurrencyNotSupportedError, RateLimitError, APIServiceError):
             raise
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Network error fetching price for {crypto_id} in {vs_currency}: {str(e)}")
+            raise APIServiceError("Network error while fetching cryptocurrency data")
         except Exception as e:
-            logger.error(f"Error fetching price for {crypto_id} in {vs_currency}: {str(e)}")
-            raise ValueError("Unable to fetch cryptocurrency price")
+            logger.error(f"Unexpected error fetching price for {crypto_id} in {vs_currency}: {str(e)}")
+            raise APIServiceError("Unable to fetch cryptocurrency price")
     
     def get_all_coins(self, vs_currency: str = "usd", limit: int = 100) -> list:
         cache_key = f"all_coins_{vs_currency}_{limit}"
@@ -109,15 +133,27 @@ class CoinGeckoProvider(CryptoProvider):
         
         try:
             response = requests.get(url, params=params)
+            
+            if response.status_code == 429:
+                logger.warning(f"Rate limit exceeded for CoinGecko API - fetching coins in {vs_currency}")
+                raise RateLimitError("API rate limit exceeded. Please try again later")
+            elif response.status_code == 503:
+                logger.warning(f"CoinGecko API service unavailable - fetching coins in {vs_currency}")
+                raise APIServiceError("Cryptocurrency data service is temporarily unavailable")
+            
             response.raise_for_status()
             data = response.json()
             
-            # Cache the result
             self._set_cache(cache_key, data)
             return data
+        except (RateLimitError, APIServiceError):
+            raise
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Network error fetching coins for {vs_currency} with limit {limit}: {str(e)}")
+            raise APIServiceError("Network error while fetching cryptocurrency data")
         except Exception as e:
-            logger.error(f"Error fetching coins for {vs_currency} with limit {limit}: {str(e)}")
-            raise ValueError("Unable to fetch cryptocurrency market data")
+            logger.error(f"Unexpected error fetching coins for {vs_currency} with limit {limit}: {str(e)}")
+            raise APIServiceError("Unable to fetch cryptocurrency market data")
     
     def get_coins_by_ids(self, coin_ids: list, vs_currency: str = "usd") -> list:
         if not coin_ids:
@@ -145,14 +181,27 @@ class CoinGeckoProvider(CryptoProvider):
         
         try:
             response = requests.get(url, params=params)
+            
+            if response.status_code == 429:
+                logger.warning(f"Rate limit exceeded for CoinGecko API - fetching specific coins: {coin_ids}")
+                raise RateLimitError("API rate limit exceeded. Please try again later")
+            elif response.status_code == 503:
+                logger.warning(f"CoinGecko API service unavailable - fetching specific coins: {coin_ids}")
+                raise APIServiceError("Cryptocurrency data service is temporarily unavailable")
+            
             response.raise_for_status()
             data = response.json()
             
             self._set_cache(cache_key, data)
             return data
+        except (RateLimitError, APIServiceError):
+            raise
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Network error fetching specific coins {coin_ids} for {vs_currency}: {str(e)}")
+            raise APIServiceError("Network error while fetching cryptocurrency data")
         except Exception as e:
-            logger.error(f"Error fetching specific coins {coin_ids} for {vs_currency}: {str(e)}")
-            raise ValueError("Unable to fetch cryptocurrency market data")
+            logger.error(f"Unexpected error fetching specific coins {coin_ids} for {vs_currency}: {str(e)}")
+            raise APIServiceError("Unable to fetch cryptocurrency market data")
 
 PROVIDERS = {
     "coingecko": CoinGeckoProvider

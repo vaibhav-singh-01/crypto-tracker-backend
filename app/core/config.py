@@ -1,11 +1,9 @@
 import os
 import json
-import logging
+from app.core.logging import log as logger
 from dotenv import load_dotenv
 
 load_dotenv()
-
-logger = logging.getLogger(__name__)
 
 class AppConfig:
     PROJECT_NAME: str = "Crypto Tracker API"
